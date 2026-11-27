@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12111c">
+<title>말모 · AI와 나누는 3분 영어 통화</title>
+<meta name="description" content="모르는 단어는 한국어로 말해도 괜찮아요. AI와 3분 영어 통화하고, 끝나면 내가 쓴 한국어를 영어로 알려드려요.">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+<style>
+  :root {
+    --bg: #12111c;
+    --card: #1c1a2c;
+    --card-border: #2c2a40;
+    --text: #f4f3fa;
+    --muted: #a9a6bd;
+    --accent: #9b7bff;
+    --accent-soft: #b39cff;
+    --accent-ink: #1d1638;
+    --danger: #ff9fb2;
+    --red: #ff5c72;
+    --chip: #262438;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 600px at 50% 40%, #1a1830 0%, var(--bg) 60%);
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    -webkit-font-smoothing: antialiased;
+    display: flex; align-items: center; justify-content: center;
+    padding: 24px 16px calc(24px + env(safe-area-inset-bottom));
+  }
+  button { font: inherit; cursor: pointer; border: 0; }
+  .hidden { display: none !important; }
+
+  .card {
+    width: 100%; max-width: 440px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 28px;
+    padding: 36px 28px 30px;
+    text-align: center;
+    box-shadow: 0 30px 80px rgba(0,0,0,.45);
+    position: relative;
+  }
+  .gear {
+    position: absolute; top: 14px; right: 14px;
+    width: 36px; height: 36px; border-radius: 50%;
+    background: transparent; color: var(--muted);
+    display: grid; place-items: center;
+  }
+  .gear:hover { background: var(--chip); color: var(--text); }
+
+  .logo {
+    width: 72px; height: 72px; border-radius: 50%;
+    margin: 0 auto 18px;
+    background: var(--accent);
+    display: grid; place-items: center;
+    color: #fff; font-size: 34px; font-weight: 600;
+    position: relative;
+  }
+  .logo svg { width: 36px; height: 36px; }
+  .orb svg { width: 46px; height: 46px; }
+  h1 { font-size: 40px; margin: 0 0 14px; font-weight: 800; letter-spacing: -0.5px; }
+  .sub { color: var(--muted); margin: 0 0 26px; font-size: 17px; }
+  .hint { color: var(--muted); font-size: 14px; line-height: 1.6; margin: -10px 0 24px; }
+  .hint b { color: var(--accent-soft); font-weight: 600; }
+
+  .primary {
+    width: 100%; padding: 18px; border-radius: 16px;
+    background: var(--accent-soft); color: var(--accent-ink);
+    font-size: 18px; font-weight: 700;
+    transition: transform .08s, filter .2s;
+  }
+  .primary:hover { filter: brightness(1.05); }
+  .primary:active { transform: scale(.98); }
+  .primary:disabled { opacity: .6; cursor: default; }
+  .secondary {
+    width: 100%; padding: 15px; border-radius: 16px;
+    background: var(--chip); color: var(--text);
+    font-size: 16px; font-weight: 600; margin-top: 10px;
+  }
+  .error { color: var(--danger); font-size: 15px; margin: 20px 0 0; min-height: 1em; line-height: 1.5; }
+  .error:empty { display: none; }
+
+  /* ── 통화 중 ── */
+  .orb-wrap { position: relative; width: 150px; height: 150px; margin: 6px auto 22px; }
+  .orb {
+    position: absolute; inset: 25px; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #c9b8ff, var(--accent) 55%, #6a4be0);
+    display: grid; place-items: center; color: #fff; font-size: 40px;
+    transition: transform .12s ease-out;
+    z-index: 2;
+  }
+  .ring {
+    position: absolute; inset: 25px; border-radius: 50%;
+    border: 2px solid var(--accent);
+    opacity: 0;
+  }
+  .speaking .ring { animation: ripple 1.8s ease-out infinite; }
+  .speaking .ring:nth-child(2) { animation-delay: .6s; }
+  .speaking .ring:nth-child(3) { animation-delay: 1.2s; }
+  @keyframes ripple {
+    0% { transform: scale(1); opacity: .6; }
+    100% { transform: scale(1.7); opacity: 0; }
+  }
+  .status { color: var(--muted); font-size: 15px; margin: 0 0 6px; min-height: 1.4em; }
+  .timer { font-size: 44px; font-weight: 700; font-variant-numeric: tabular-nums; margin: 0 0 10px; letter-spacing: 1px; }
+  .timer.low { color: var(--danger); }
+  .bar { height: 6px; background: var(--chip); border-radius: 99px; overflow: hidden; margin: 0 0 22px; }
+  .bar > i { display: block; height: 100%; width: 100%; background: var(--accent-soft); transform-origin: left; transition: transform 1s linear; }
+  .caption {
+    min-height: 3.2em; color: var(--text); font-size: 15px; line-height: 1.6;
+    background: #171526; border-radius: 14px; padding: 12px 14px; margin: 0 0 22px; text-align: left;
+  }
+  .caption small { display: block; color: var(--muted); font-size: 12px; margin-bottom: 2px; }
+  .controls { display: flex; gap: 18px; justify-content: center; }
+  .round {
+    width: 64px; height: 64px; border-radius: 50%;
+    display: grid; place-items: center;
+    background: var(--chip); color: var(--text);
+  }
+  .round.on { background: #fff; color: #111; }
+  .round.end { background: var(--red); color: #fff; }
+  .round-label { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+  /* ── 결과 ── */
+  .result h2 { font-size: 24px; margin: 0 0 6px; }
+  .result .sub { margin-bottom: 20px; font-size: 15px; }
+  .words { list-style: none; padding: 0; margin: 0 0 18px; text-align: left; display: grid; gap: 10px; }
+  .words li { background: #171526; border: 1px solid var(--card-border); border-radius: 16px; padding: 14px 16px; }
+  .words .pair { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 17px; }
+  .words .ko { color: var(--muted); }
+  .words .arrow { color: var(--accent); }
+  .words .en { font-weight: 700; color: var(--accent-soft); }
+  .words .say { margin-left: auto; background: var(--chip); color: var(--text); width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; }
+  .words .ex { margin-top: 8px; font-size: 14px; color: var(--muted); line-height: 1.55; }
+  .words .ex b { color: var(--text); font-weight: 600; }
+  .empty { white-space: pre-line; background: #171526; border-radius: 16px; padding: 20px; color: var(--muted); margin-bottom: 18px; line-height: 1.6; }
+  details.log { text-align: left; margin: 0 0 18px; }
+  details.log summary { color: var(--muted); font-size: 14px; cursor: pointer; padding: 6px 0; }
+  .log-list { max-height: 260px; overflow: auto; display: grid; gap: 8px; padding-top: 8px; }
+  .msg { font-size: 14px; line-height: 1.55; padding: 10px 12px; border-radius: 12px; }
+  .msg.user { background: #2a2346; margin-left: 24px; }
+  .msg.ai { background: #171526; margin-right: 24px; }
+  .msg small { display: block; color: var(--muted); font-size: 11px; margin-bottom: 2px; }
+  .spinner { width: 28px; height: 28px; border: 3px solid var(--chip); border-top-color: var(--accent-soft); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 10px auto 14px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── 설정 ── */
+  .field { text-align: left; margin: 0 0 16px; }
+  .field label { display: block; font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+  .field input, .field select {
+    width: 100%; padding: 14px 16px; border-radius: 14px;
+    background: #171526; border: 1px solid var(--card-border); color: var(--text);
+    font: inherit; font-size: 15px; outline: none;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .note { font-size: 13px; color: var(--muted); line-height: 1.6; text-align: left; margin: 0 0 18px; }
+  .note a { color: var(--accent-soft); }
+</style>
+</head>
+<body>
+
+<!-- 시작 화면 -->
+<main class="card" id="screen-home">
+  <button class="gear" id="btn-settings" aria-label="설정">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+  </button>
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 12c2-6 5-6 6 0s4 6 6 0 4-6 6 0"/></svg></div>
+  <h1>말모</h1>
+  <p class="sub">AI와 나누는 3분 영어 통화</p>
+  <p class="hint">모르는 단어는 <b>한국어로 말해도 괜찮아요.</b><br>통화가 끝나면 영어로 알려드릴게요.</p>
+  <button class="primary" id="btn-start">통화 시작</button>
+  <p class="error" id="home-error"></p>
+</main>
+
+<!-- 설정 화면 -->
+<main class="card hidden" id="screen-settings">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 12c2-6 5-6 6 0s4 6 6 0 4-6 6 0"/></svg></div>
+  <h1 style="font-size:28px">설정</h1>
+  <p class="sub" style="font-size:15px">통화에는 OpenAI 음성 API 키가 필요해요.</p>
+  <div class="field">
+    <label for="api-key">OpenAI API 키</label>
+    <input id="api-key" type="password" placeholder="sk-..." autocomplete="off" spellcheck="false">
+  </div>
+  <div class="field">
+    <label for="voice">AI 목소리</label>
+    <select id="voice">
+      <option value="marin">Marin (여성)</option>
+      <option value="cedar">Cedar (남성)</option>
+      <option value="shimmer">Shimmer</option>
+      <option value="verse">Verse</option>
+      <option value="alloy">Alloy</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="level">내 영어 수준</label>
+    <select id="level">
+      <option value="beginner">처음 시작해요 (아주 쉽게)</option>
+      <option value="intermediate" selected>기본 대화는 돼요</option>
+      <option value="advanced">자연스럽게 대화하고 싶어요</option>
+    </select>
+  </div>
+  <p class="note">키는 이 기기의 브라우저에만 저장되고, OpenAI 서버로만 전송돼요. 키는 <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com</a>에서 만들 수 있어요.</p>
+  <button class="primary" id="btn-save">저장</button>
+  <button class="secondary" id="btn-cancel">돌아가기</button>
+</main>
+
+<!-- 통화 화면 -->
+<main class="card hidden" id="screen-call">
+  <div class="orb-wrap" id="orb-wrap">
+    <span class="ring"></span><span class="ring"></span><span class="ring"></span>
+    <div class="orb" id="orb"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 12c2-6 5-6 6 0s4 6 6 0 4-6 6 0"/></svg></div>
+  </div>
+  <p class="status" id="status">연결 중…</p>
+  <div class="timer" id="timer">3:00</div>
+  <div class="bar"><i id="bar"></i></div>
+  <div class="caption" id="caption"><small>AI</small>&nbsp;</div>
+  <div class="controls">
+    <div>
+      <button class="round" id="btn-mute" aria-label="음소거">
+        <svg id="ic-mic" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10v1a7 7 0 0 0 14 0v-1"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
+      </button>
+      <div class="round-label" id="mute-label">음소거</div>
+    </div>
+    <div>
+      <button class="round end" id="btn-end" aria-label="통화 종료">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.956.956 0 0 1 0-1.36C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.72c.18.18.29.44.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28a11.27 11.27 0 0 0-2.67-1.85.996.996 0 0 1-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z"/></svg>
+      </button>
+      <div class="round-label">종료</div>
+    </div>
+  </div>
+</main>
+
+<!-- 결과 화면 -->
+<main class="card hidden result" id="screen-result">
+  <div class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M3 12c2-6 5-6 6 0s4 6 6 0 4-6 6 0"/></svg></div>
+  <h2>통화 끝! 수고했어요</h2>
+  <p class="sub" id="result-sub">내가 한국어로 말한 부분을 영어로 정리했어요.</p>
+  <div id="result-loading"><div class="spinner"></div><p class="status">정리하는 중…</p></div>
+  <ul class="words" id="words"></ul>
+  <div class="empty hidden" id="no-words"></div>
+  <details class="log" id="log-wrap">
+    <summary>대화 전체 보기</summary>
+    <div class="log-list" id="log"></div>
+  </details>
+  <button class="primary" id="btn-again">다시 통화하기</button>
+  <button class="secondary" id="btn-home">처음으로</button>
+</main>
+
+<audio id="remote-audio" autoplay playsinline></audio>
+
+<script>
+(() => {
+  const CALL_SECONDS = 180;
+  const MODEL = "gpt-realtime";
+  const SUMMARY_MODEL = "gpt-4o-mini";
+  const LS = { key: "malmo.apiKey", voice: "malmo.voice", level: "malmo.level" };
+
+  const $ = (id) => document.getElementById(id);
+  const screens = ["home", "settings", "call", "result"];
+  function show(name) {
+    screens.forEach((s) => $("screen-" + s).classList.toggle("hidden", s !== name));
+  }
+
+  const store = {
+    get(k, d = "") { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  };
+
+  // ───────── 설정 ─────────
+  let afterSettings = null;
+  function openSettings(next = null) {
+    afterSettings = next;
+    $("api-key").value = store.get(LS.key);
+    $("voice").value = store.get(LS.voice, "marin");
+    $("level").value = store.get(LS.level, "intermediate");
+    show("settings");
+    setTimeout(() => $("api-key").focus(), 50);
+  }
+  $("btn-settings").onclick = () => openSettings();
+  $("btn-cancel").onclick = () => show("home");
+  $("btn-save").onclick = () => {
+    const key = $("api-key").value.trim();
+    store.set(LS.key, key);
+    store.set(LS.voice, $("voice").value);
+    store.set(LS.level, $("level").value);
+    $("home-error").textContent = "";
+    show("home");
+    if (key && afterSettings) { const f = afterSettings; afterSettings = null; f(); }
+  };
+
+  // ───────── 프롬프트 ─────────
+  const LEVEL_TEXT = {
+    beginner: "The learner is a beginner. Use very short, simple sentences and common words. Speak slowly and clearly.",
+    intermediate: "The learner is an intermediate speaker. Use everyday, natural English at a relaxed pace.",
+    advanced: "The learner is fairly advanced. Speak naturally, at normal speed, with natural idioms.",
+  };
+  function buildInstructions(level) {
+    return [
+      "You are Malmo, a warm and friendly English conversation partner on a 3-minute phone call with a Korean learner.",
+      LEVEL_TEXT[level] || LEVEL_TEXT.intermediate,
+      "Always speak in English only. Never switch to Korean, even if the learner does.",
+      "IMPORTANT: The learner may mix Korean words or phrases into their English when they don't know the English word (for example: \"I went to the 편의점 yesterday\").",
+      "Understand the Korean naturally and keep the conversation going smoothly. Do not stop to teach, correct, or translate — the learner will get a summary of those words after the call.",
+      "It is fine to naturally use the English word yourself in your reply, but don't make a point of it.",
+      "Keep each turn short (1-3 sentences) and end most turns with an easy, open question so the learner talks more than you.",
+      "Start by greeting the learner briefly and asking one easy question about their day.",
+      "When you are told the call is ending, say a short, warm goodbye.",
+    ].join("\n");
+  }
+
+  // ───────── 통화 상태 ─────────
+  let pc = null, dc = null, micStream = null;
+  let timerId = null, remaining = CALL_SECONDS, ending = false, muted = false;
+  let audioCtx = null, analyser = null, rafId = null;
+  let order = [];           // item_id 순서
+  let items = {};           // item_id -> { role, text }
+  let liveAi = "";
+
+  function resetCallState() {
+    order = []; items = {}; liveAi = ""; ending = false; muted = false;
+    remaining = CALL_SECONDS;
+    $("timer").textContent = fmt(CALL_SECONDS);
+    $("timer").classList.remove("low");
+    $("bar").style.transform = "scaleX(1)";
+    $("caption").innerHTML = "<small>AI</small>&nbsp;";
+    $("btn-mute").classList.remove("on");
+    $("mute-label").textContent = "음소거";
+    $("orb-wrap").classList.remove("speaking");
+  }
+  const fmt = (s) => Math.floor(s / 60) + ":" + String(s % 60).padStart(2, "0");
+
+  function friendlyError(status, body) {
+    const code = body?.error?.code || "";
+    const type = body?.error?.type || "";
+    if (status === 401 || code === "invalid_api_key") return "API 키가 올바르지 않아요. 설정에서 다시 확인해 주세요.";
+    if (status === 429 || code === "insufficient_quota" || type === "insufficient_quota") return "음성 API의 사용 한도나 잔액을 확인해 주세요.";
+    if (status === 403 || status === 404) return "이 API 키로는 음성 모델을 쓸 수 없어요. 계정 권한을 확인해 주세요.";
+    return "연결에 실패했어요. 잠시 후 다시 시도해 주세요." + (status ? ` (${status})` : "");
+  }
+
+  async function startCall() {
+    const key = store.get(LS.key);
+    if (!key) { openSettings(startCall); return; }
+    $("home-error").textContent = "";
+    $("btn-start").disabled = true;
+    $("btn-start").textContent = "연결 중…";
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      });
+    } catch (e) {
+      failHome("마이크를 사용할 수 있게 허용해 주세요.");
+      return;
+    }
+
+    resetCallState();
+    show("call");
+    $("status").textContent = "연결 중…";
+
+    try {
+      // 1) 임시 세션 키 발급
+      const voice = store.get(LS.voice, "marin");
+      const level = store.get(LS.level, "intermediate");
+      const sessRes = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + key, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          session: {
+            type: "realtime",
+            model: MODEL,
+            instructions: buildInstructions(level),
+            audio: {
+              input: {
+                transcription: {
+                  model: "gpt-4o-transcribe",
+                  prompt: "English conversation by a Korean learner who sometimes mixes Korean words into English sentences. Write Korean words in Hangul.",
+                },
+                turn_detection: { type: "server_vad", silence_duration_ms: 700 },
+              },
+              output: { voice },
+            },
+          },
+        }),
+      });
+      const sessBody = await sessRes.json().catch(() => ({}));
+      if (!sessRes.ok) throw { status: sessRes.status, body: sessBody };
+      const ephemeral = sessBody.value || sessBody.client_secret?.value;
+      if (!ephemeral) throw { status: 0, body: sessBody };
+
+      // 2) WebRTC 연결
+      pc = new RTCPeerConnection();
+      pc.ontrack = (e) => {
+        const el = $("remote-audio");
+        el.srcObject = e.streams[0];
+        el.play().catch(() => {});
+        watchLevel(e.streams[0]);
+      };
+      pc.onconnectionstatechange = () => {
+        if (["failed", "disconnected"].includes(pc?.connectionState) && !ending) {
+          endCall("연결이 끊어졌어요.");
+        }
+      };
+      micStream.getTracks().forEach((t) => pc.addTrack(t, micStream));
+
+      dc = pc.createDataChannel("oai-events");
+      dc.onopen = onChannelOpen;
+      dc.onmessage = (e) => { try { onEvent(JSON.parse(e.data)); } catch {} };
+
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      const sdpRes = await fetch("https://api.openai.com/v1/realtime/calls?model=" + encodeURIComponent(MODEL), {
+        method: "POST",
+        headers: { Authorization: "Bearer " + ephemeral, "Content-Type": "application/sdp" },
+        body: offer.sdp,
+      });
+      if (!sdpRes.ok) {
+        const t = await sdpRes.text();
+        let b = {}; try { b = JSON.parse(t); } catch {}
+        throw { status: sdpRes.status, body: b };
+      }
+      await pc.setRemoteDescription({ type: "answer", sdp: await sdpRes.text() });
+    } catch (err) {
+      console.error(err);
+      cleanup();
+      failHome(friendlyError(err?.status, err?.body));
+    }
+  }
+
+  function failHome(msg) {
+    cleanup();
+    show("home");
+    $("home-error").textContent = msg;
+    $("btn-start").disabled = false;
+    $("btn-start").textContent = "통화 시작";
+  }
+
+  function onChannelOpen() {
+    $("status").textContent = "통화 중";
+    // AI가 먼저 인사
+    dc.send(JSON.stringify({ type: "response.create" }));
+    timerId = setInterval(tick, 1000);
+  }
+
+  function tick() {
+    remaining--;
+    $("timer").textContent = fmt(Math.max(remaining, 0));
+    $("bar").style.transform = `scaleX(${Math.max(remaining, 0) / CALL_SECONDS})`;
+    if (remaining <= 20) $("timer").classList.add("low");
+    if (remaining === 12 && dc?.readyState === "open") {
+      // 마무리 인사 유도
+      dc.send(JSON.stringify({ type: "response.cancel" }));
+      dc.send(JSON.stringify({
+        type: "response.create",
+        response: { instructions: "The call is ending now. Say a short, warm goodbye in one or two sentences." },
+      }));
+    }
+    if (remaining <= 0) endCall();
+  }
+
+  function ensureItem(id, role) {
+    if (!id) return null;
+    if (!items[id]) { items[id] = { role, text: "" }; order.push(id); }
+    else if (role && !items[id].role) items[id].role = role;
+    return items[id];
+  }
+
+  function onEvent(ev) {
+    switch (ev.type) {
+      case "conversation.item.created":
+      case "conversation.item.added":
+        if (ev.item?.type === "message") ensureItem(ev.item.id, ev.item.role);
+        break;
+      case "input_audio_buffer.speech_started":
+        $("status").textContent = "듣고 있어요…";
+        break;
+      case "input_audio_buffer.speech_stopped":
+        $("status").textContent = "통화 중";
+        break;
+      case "conversation.item.input_audio_transcription.completed": {
+        const it = ensureItem(ev.item_id, "user");
+        if (it) it.text = (ev.transcript || "").trim();
+        break;
+      }
+      case "response.output_audio_transcript.delta":
+      case "response.audio_transcript.delta": {
+        const it = ensureItem(ev.item_id, "assistant");
+        if (it) it.text += ev.delta || "";
+        liveAi = it ? it.text : liveAi + (ev.delta || "");
+        setCaption(liveAi);
+        break;
+      }
+      case "response.output_audio_transcript.done":
+      case "response.audio_transcript.done": {
+        const it = ensureItem(ev.item_id, "assistant");
+        if (it && ev.transcript) it.text = ev.transcript;
+        break;
+      }
+      case "error": {
+        const code = ev.error?.code || "";
+        if (code === "insufficient_quota" || /quota|rate/i.test(ev.error?.message || "")) {
+          endCall("음성 API의 사용 한도나 잔액을 확인해 주세요.");
+        }
+        break;
+      }
+    }
+  }
+
+  function setCaption(text) {
+    const c = $("caption");
+    c.innerHTML = "<small>AI</small>";
+    c.appendChild(document.createTextNode(text));
+  }
+
+  function watchLevel(stream) {
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const src = audioCtx.createMediaStreamSource(stream);
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 256;
+      src.connect(analyser);
+      const data = new Uint8Array(analyser.frequencyBinCount);
+      const orb = $("orb"), wrap = $("orb-wrap");
+      const loop = () => {
+        analyser.getByteFrequencyData(data);
+        let sum = 0; for (let i = 0; i < data.length; i++) sum += data[i];
+        const lvl = sum / data.length / 255;
+        orb.style.transform = `scale(${1 + Math.min(lvl * 1.6, 0.35)})`;
+        wrap.classList.toggle("speaking", lvl > 0.04);
+        rafId = requestAnimationFrame(loop);
+      };
+      loop();
+    } catch {}
+  }
+
+  $("btn-mute").onclick = () => {
+    muted = !muted;
+    micStream?.getAudioTracks().forEach((t) => (t.enabled = !muted));
+    $("btn-mute").classList.toggle("on", muted);
+    $("mute-label").textContent = muted ? "음소거 해제" : "음소거";
+  };
+  $("btn-end").onclick = () => endCall();
+
+  function cleanup() {
+    clearInterval(timerId); timerId = null;
+    cancelAnimationFrame(rafId); rafId = null;
+    try { dc?.close(); } catch {}
+    try { pc?.getSenders().forEach((s) => s.track?.stop()); pc?.close(); } catch {}
+    micStream?.getTracks().forEach((t) => t.stop());
+    try { audioCtx?.close(); } catch {}
+    dc = pc = micStream = audioCtx = analyser = null;
+    const el = $("remote-audio"); el.srcObject = null;
+  }
+
+  function endCall(errorMsg) {
+    if (ending) return;
+    ending = true;
+    cleanup();
+    $("btn-start").disabled = false;
+    $("btn-start").textContent = "통화 시작";
+
+    const convo = order.map((id) => items[id]).filter((m) => m && m.text && m.text.trim());
+    if (errorMsg && !convo.some((m) => m.role === "user")) {
+      show("home");
+      $("home-error").textContent = errorMsg;
+      return;
+    }
+    showResult(convo);
+  }
+
+  // ───────── 결과 ─────────
+  const HANGUL = /[ㄱ-ㆎ가-힣]/;
+
+  function renderLog(convo) {
+    const log = $("log"); log.innerHTML = "";
+    convo.forEach((m) => {
+      const d = document.createElement("div");
+      d.className = "msg " + (m.role === "user" ? "user" : "ai");
+      d.innerHTML = `<small>${m.role === "user" ? "나" : "AI"}</small>`;
+      d.appendChild(document.createTextNode(m.text));
+      log.appendChild(d);
+    });
+    $("log-wrap").classList.toggle("hidden", convo.length === 0);
+  }
+
+  function speak(text) {
+    try {
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US"; u.rate = 0.9;
+      speechSynthesis.speak(u);
+    } catch {}
+  }
+
+  function renderWords(list) {
+    const ul = $("words"); ul.innerHTML = "";
+    list.forEach((w) => {
+      const li = document.createElement("li");
+      const pair = document.createElement("div"); pair.className = "pair";
+      const ko = document.createElement("span"); ko.className = "ko"; ko.textContent = w.korean;
+      const ar = document.createElement("span"); ar.className = "arrow"; ar.textContent = "→";
+      const en = document.createElement("span"); en.className = "en"; en.textContent = w.english;
+      const btn = document.createElement("button"); btn.className = "say"; btn.setAttribute("aria-label", "발음 듣기");
+      btn.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg>';
+      btn.onclick = () => speak(w.english);
+      pair.append(ko, ar, en, btn);
+      li.appendChild(pair);
+      if (w.original || w.corrected) {
+        const ex = document.createElement("div"); ex.className = "ex";
+        if (w.original) { ex.appendChild(document.createTextNode("내가 한 말: " + w.original)); }
+        if (w.corrected) {
+          if (w.original) ex.appendChild(document.createElement("br"));
+          ex.appendChild(document.createTextNode("영어로: "));
+          const b = document.createElement("b"); b.textContent = w.corrected; ex.appendChild(b);
+        }
+        li.appendChild(ex);
+      }
+      ul.appendChild(li);
+    });
+  }
+
+  async function showResult(convo) {
+    show("result");
+    renderLog(convo);
+    $("words").innerHTML = "";
+    $("no-words").classList.add("hidden");
+    $("result-loading").classList.remove("hidden");
+    $("result-sub").textContent = "내가 한국어로 말한 부분을 영어로 정리했어요.";
+
+    const userLines = convo.filter((m) => m.role === "user").map((m) => m.text);
+    const finish = (words, emptyMsg) => {
+      $("result-loading").classList.add("hidden");
+      if (words.length) renderWords(words);
+      else { $("no-words").textContent = emptyMsg; $("no-words").classList.remove("hidden"); }
+    };
+
+    if (!userLines.length) {
+      finish([], "이번 통화에서는 대화 내용이 기록되지 않았어요. 다음엔 조금 더 길게 이야기해 봐요!");
+      return;
+    }
+    if (!userLines.some((l) => HANGUL.test(l))) {
+      $("result-sub").textContent = "대단해요!";
+      finish([], "이번 통화에서는 한국어를 하나도 쓰지 않았어요 👏\n아래에서 대화 전체를 다시 볼 수 있어요.");
+      return;
+    }
+
+    try {
+      const res = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: { Authorization: "Bearer " + store.get(LS.key), "Content-Type": "application/json" },
+        body: JSON.stringify({
+          model: SUMMARY_MODEL,
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          messages: [
+            {
+              role: "system",
+              content:
+                "You help a Korean learner of English. Below are things the learner said during an English phone call. " +
+                "When they didn't know an English word, they said it in Korean. Find every Korean word or phrase they used. " +
+                "For each, give the most natural English expression in that context. " +
+                "Return JSON: {\"items\":[{\"korean\":\"<Korean as said>\",\"english\":\"<natural English word/phrase>\",\"original\":\"<the learner's full sentence as said>\",\"corrected\":\"<that sentence rewritten fully in natural English>\"}]}. " +
+                "Do not repeat the same Korean word twice. Ignore filler sounds like '음', '어'.",
+            },
+            { role: "user", content: userLines.map((l, i) => `${i + 1}. ${l}`).join("\n") },
+          ],
+        }),
+      });
+      const body = await res.json();
+      if (!res.ok) throw { status: res.status, body };
+      const parsed = JSON.parse(body.choices?.[0]?.message?.content || "{}");
+      const words = (parsed.items || []).filter((w) => w && w.korean && w.english);
+      finish(words, "한국어로 말한 단어를 찾지 못했어요. 아래에서 대화 전체를 볼 수 있어요.");
+    } catch (err) {
+      console.error(err);
+      // 실패 시 한국어가 들어간 문장만이라도 보여주기
+      $("result-sub").textContent = friendlyError(err?.status, err?.body);
+      finish(
+        userLines.filter((l) => HANGUL.test(l)).map((l) => ({ korean: l.match(/[ㄱ-ㆎ가-힣\s]+/g).map((s) => s.trim()).filter(Boolean).join(", "), english: "?", original: l })),
+        "정리에 실패했어요."
+      );
+    }
+  }
+
+  $("btn-start").onclick = startCall;
+  $("btn-again").onclick = startCall;
+  $("btn-home").onclick = () => show("home");
+  window.addEventListener("beforeunload", cleanup);
+})();
+</script>
+</body>
+</html>
