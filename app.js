@@ -14,24 +14,51 @@
   const $ = (id) => document.getElementById(id);
   const screens = ["home", "settings", "call", "result"];
   const show = (name) => screens.forEach((s) => $("screen-" + s).classList.toggle("hidden", s !== name));
+  // 브라우저 저장이 막혀 있어도(개인정보 보호 모드 등) 이번 방문 동안은 기억해요
+  const mem = {};
   const store = {
-    get(k, d = "") { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
-    set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+    get(k, d = "") { try { const v = localStorage.getItem(k); if (v != null) return v; } catch {} return mem[k] ?? d; },
+    set(k, v) { mem[k] = v; try { localStorage.setItem(k, v); } catch {} },
   };
+  // 복사할 때 섞여 들어간 공백·따옴표·보이지 않는 문자를 지워요
+  const cleanKey = (v) => String(v || "").replace(/[\s"'`\u200B-\u200D\uFEFF]/g, "");
 
   // ───────── 설정 ─────────
   let afterSettings = null;
   function openSettings(next = null) {
     afterSettings = next;
     $("api-key").value = store.get(LS.key);
+    $("api-key").dispatchEvent(new Event("input"));
     $("voice").value = store.get(LS.voice, "Aoede");
     $("level").value = store.get(LS.level, "intermediate");
     show("settings");
   }
   $("btn-settings").onclick = () => openSettings();
   $("btn-cancel").onclick = () => show("home");
+  const keyMsg = (text, cls = "") => { $("key-msg").textContent = text; $("key-msg").className = "key-msg " + cls; };
+  $("api-key").addEventListener("input", () => {
+    const k = cleanKey($("api-key").value);
+    if (!k) keyMsg("");
+    else if (/^AIza[0-9A-Za-z_-]{30,}$/.test(k)) keyMsg("키 모양이 맞아요 ✓", "good");
+    else keyMsg("Gemini 키는 보통 AIza 로 시작해요. 다시 확인해 주세요.", "bad");
+  });
+  $("btn-paste").onclick = async () => {
+    try {
+      const t = await navigator.clipboard.readText();
+      $("api-key").value = cleanKey(t);
+      $("api-key").dispatchEvent(new Event("input"));
+    } catch {
+      $("api-key").focus();
+      keyMsg("칸을 길게 누른 뒤 '붙여넣기'를 눌러 주세요.", "bad");
+    }
+  };
+  $("btn-eye").onclick = () => {
+    const shown = $("api-key").classList.toggle("show");
+    $("btn-eye").textContent = shown ? "숨기기" : "보기";
+  };
   $("btn-save").onclick = () => {
-    const key = $("api-key").value.trim();
+    const key = cleanKey($("api-key").value);
+    if (key && !/^AIza/.test(key)) { keyMsg("Gemini 키는 AIza 로 시작해요. 다시 확인해 주세요.", "bad"); return; }
     store.set(LS.key, key);
     store.set(LS.voice, $("voice").value);
     store.set(LS.level, $("level").value);

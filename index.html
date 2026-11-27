@@ -156,9 +156,16 @@
   .field input, .field select {
     width: 100%; padding: 14px 16px; border-radius: 14px;
     background: #171526; border: 1px solid var(--card-border); color: var(--text);
-    font: inherit; font-size: 15px; outline: none;
+    font: inherit; font-size: 16px; outline: none;
   }
   .field input:focus, .field select:focus { border-color: var(--accent); }
+  .key-row { display: flex; gap: 8px; }
+  .key-row input { flex: 1; min-width: 0; -webkit-text-security: disc; }
+  .key-row input.show { -webkit-text-security: none; }
+  .key-row button { flex: none; padding: 0 14px; border-radius: 14px; background: var(--chip); color: var(--text); font-size: 14px; font-weight: 600; }
+  .key-msg { font-size: 13px; margin: 8px 0 0; min-height: 1em; color: var(--muted); }
+  .key-msg.bad { color: var(--danger); }
+  .key-msg.good { color: #8ee6a8; }
   .note { font-size: 13px; color: var(--muted); line-height: 1.6; text-align: left; margin: 0 0 18px; }
   .note a { color: var(--accent-soft); }
 </style>
@@ -185,7 +192,12 @@
   <p class="sub" style="font-size:15px">통화에는 무료 Gemini API 키가 필요해요.</p>
   <div class="field">
     <label for="api-key">Gemini API 키</label>
-    <input id="api-key" type="password" placeholder="AIza..." autocomplete="off" spellcheck="false">
+    <div class="key-row">
+      <input id="api-key" type="text" inputmode="text" placeholder="AIza... 로 시작하는 키" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button type="button" id="btn-paste">붙여넣기</button>
+      <button type="button" id="btn-eye">보기</button>
+    </div>
+    <p class="key-msg" id="key-msg"></p>
   </div>
   <div class="field">
     <label for="voice">AI 목소리</label>
